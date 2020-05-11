@@ -1,0 +1,2 @@
+com.acme.proc.IsolatingProcessor,isolating
+com.acme.proc.AggregatingProcessor,aggregating
