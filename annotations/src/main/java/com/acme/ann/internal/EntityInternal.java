@@ -13,11 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.acme.consumer;
+package com.acme.ann.internal;
 
-import com.acme.ann.Entity;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-@Entity
-public class Cow {
-    int x = 25;
+@Retention(RetentionPolicy.CLASS)
+@Target(ElementType.TYPE)
+public @interface EntityInternal {
 }

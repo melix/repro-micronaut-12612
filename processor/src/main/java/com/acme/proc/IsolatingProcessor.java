@@ -27,7 +27,6 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.tools.FileObject;
-import javax.tools.StandardLocation;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Set;
@@ -58,14 +57,16 @@ public class IsolatingProcessor extends AbstractProcessor {
                         String pkg = clazz.className();
                         pkg = pkg.substring(0, pkg.lastIndexOf("."));
                         try {
-                            FileObject generatedResource = filer.createResource(
-                                    StandardLocation.CLASS_OUTPUT,
-                                    pkg,
-                                    clazz.getSimpleName() + ".txt",
+                            // Do NOT use $ or Gradle would think it's an inner class and reprocess!
+                            String newName = clazz.getSimpleName() + "__Helper";
+                            FileObject generatedResource = filer.createSourceFile(
+                                    pkg + "." + newName,
                                     element
                             );
                             try (PrintWriter wrt = new PrintWriter(generatedResource.openWriter())) {
-                                wrt.println("I'm a " + clazz.getSimpleName().toString().toLowerCase());
+                                wrt.println("package " + pkg + ";");
+                                wrt.println("@com.acme.ann.internal.EntityInternal");
+                                wrt.println("class " + newName + " {}");
                             }
                         } catch (IOException e) {
                             e.printStackTrace();

@@ -28,17 +28,25 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 @SupportedAnnotationTypes({
-        "com.acme.ann.Entity"
+        "com.acme.ann.internal.EntityInternal"
 })
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class AggregatingProcessor extends AbstractProcessor {
 
     private Filer filer;
+    private FileObject generatedResource;
+    private final List<String> items = new ArrayList<>();
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
@@ -48,31 +56,45 @@ public class AggregatingProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        if (!annotations.isEmpty()) {
+        if (!annotations.isEmpty() && !roundEnv.errorRaised()) {
             try {
-                FileObject generatedResource = filer.createResource(
-                        StandardLocation.CLASS_OUTPUT,
-                        "data",
-                        "animals.txt"
-                );
-                StringBuilder sb = new StringBuilder();
+                if (generatedResource == null) {
+                    generatedResource = filer.createResource(
+                            StandardLocation.CLASS_OUTPUT,
+                            "data",
+                            "animals.txt"
+                    );
+                }
                 for (TypeElement annotation : annotations) {
                     Set<? extends Element> annotated = roundEnv.getElementsAnnotatedWith(annotation);
                     System.out.println("Processing " + annotated + " in " + this.getClass().getName());
                     for (Element element : annotated) {
                         if (element instanceof Symbol.ClassSymbol) {
                             Symbol.ClassSymbol clazz = (Symbol.ClassSymbol) element;
-                            sb.append("I'm a " + clazz.getSimpleName().toString().toLowerCase()).append("\n");
+                            items.add("I'm a " + clazz.getSimpleName().toString().toLowerCase() + "\n");
                         }
                     }
                 }
-                try (Writer wrt = generatedResource.openWriter()) {
-                    wrt.write(sb.toString());
+                // Ugly hack because javac would prevent writing several times to the same resource
+                try (Writer wrt = openWriter(generatedResource)) {
+                    for (String item : items) {
+                        wrt.write(item);
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
         return false;
+    }
+
+    private Writer openWriter(FileObject generatedResource) throws FileNotFoundException {
+        File file = new File(generatedResource.toUri());
+        file.getParentFile().mkdirs();
+        return new OutputStreamWriter(
+                new FileOutputStream(
+                        file
+                )
+        );
     }
 }
